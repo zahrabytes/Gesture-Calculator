@@ -1,5 +1,6 @@
 import cvzone
 import cv2
+import numpy as np
 from cvzone.HandTrackingModule import HandDetector
 
 # Initialize the webcam to capture video
@@ -27,7 +28,7 @@ def getHandInfo(img):
     else:
         return None
 
-def draw(info, prev_pos):
+def draw(info, prev_pos, canvas):
     fingers, lmList = info
     current_pos = None
 
@@ -35,27 +36,34 @@ def draw(info, prev_pos):
         current_pos = lmList[8][0:2]
         if prev_pos is None: 
             prev_pos = current_pos
-        cv2.line(img, current_pos, prev_pos, (255, 0, 255), 10)
+        cv2.line(canvas, current_pos, prev_pos, (255, 0, 255), 10)
     
-    return current_pos
+    return current_pos, canvas
 
 prev_pos = None
+canvas = None
+image_combined = None
 
 # Continuously get frames from the webcam
 while True:
     # Capture each frame from the webcam
     # 'success' will be True if the frame is successfully captured, 'img' will contain the frame
     success, img = cap.read()
+    img = cv2.flip(img, 1)
+
+    if canvas is None:
+        canvas = np.zeros_like(img)
 
     info = getHandInfo(img)
     # Check if any hands are detected
     if info:
         fingers, lmList = info
         print(fingers)
-        prev_pos = draw(info, prev_pos)
+        prev_pos, canvas = draw(info, prev_pos, canvas)
+
+    image_combined = cv2. addWeighted(img, 0.7, canvas, 0.3, 0)
        
-    # Display the image in a window
-    cv2.imshow("Image", img)
+    cv2.imshow("Image_combined", image_combined)
 
     # Keep the window open and update it for each frame; wait for 1 millisecond between frames
     cv2.waitKey(1)
