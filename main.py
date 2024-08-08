@@ -3,9 +3,12 @@ import cv2
 import numpy as np
 import google.generativeai as genai
 import os
+import streamlit as st
 from cvzone.HandTrackingModule import HandDetector
 from dotenv import load_dotenv
 from PIL import Image
+
+st.set_page_config(layout="wide")
 
 load_dotenv()
 
