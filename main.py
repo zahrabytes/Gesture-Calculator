@@ -3,13 +3,14 @@ import cv2
 import numpy as np
 import google.generativeai as genai
 import os
-import streamlit as st
+import customtkinter
 from cvzone.HandTrackingModule import HandDetector
 from dotenv import load_dotenv
-from PIL import Image
-
-st.set_page_config(layout="wide")
-
+from PIL import Image, ImageTk
+# get video feed on interface
+# get output on interface
+# toggle button
+# tutorial
 load_dotenv()
 
 genai.configure(api_key=os.environ["API_KEY"])
@@ -19,11 +20,15 @@ model = genai.GenerativeModel('gemini-1.5-flash')
 # Initialize the webcam to capture video
 # The '2' indicates the third camera connected to your computer; '0' would usually refer to the built-in camera
 cap = cv2.VideoCapture(0)
-cap.set(3,1280)
-cap.set(4, 720)
+cap.set(3, 600)
+cap.set(4, 400)
 
 # Initialize the HandDetector class with the given parameters
 detector = HandDetector(staticMode=False, maxHands=1, modelComplexity=1, detectionCon=0.7, minTrackCon=0.5)
+
+def button_callback():
+    print("button clicked")
+
 
 def getHandInfo(img):
     # Find hands in the current frame
@@ -41,11 +46,11 @@ def getHandInfo(img):
     else:
         return None
 
-def draw(info, prev_pos, canvas):
+def draw(info, prev_pos, canvas, img):
     fingers, lmList = info
     current_pos = None
 
-    if fingers == [0, 1, 0, 0, 0]:
+    if fingers == [0, 1, 0, 0, 0] or fingers == [1, 1, 0, 0, 0]:
         current_pos = lmList[8][0:2]
         if prev_pos is None: 
             prev_pos = current_pos
@@ -56,20 +61,33 @@ def draw(info, prev_pos, canvas):
     return current_pos, canvas
 
 def sendToAI(model, canvas, fingers):
-    if fingers == [1,1,1,0,1]:
+    if fingers == [0,0,0,0,1]:
         pil_image = Image.fromarray(canvas)
-        response = model.generate_content(["Solve the math problem with clear steps and showing of the math", pil_image])
-        print(response.text) 
+        response = model.generate_content(["solve this math question and give me concise step by step to do so", pil_image])
+        text_output.configure(state="normal")  # Enable text widget
+        text_output.delete("1.0", "end")  # Clear previous content
+        text_output.insert("1.0", response.text)  # Insert new text
+        text_output.configure(state="disabled") 
 
 
 prev_pos = None
 canvas = None
 image_combined = None
 
-# Continuously get frames from the webcam
-while True:
-    # Capture each frame from the webcam
-    # 'success' will be True if the frame is successfully captured, 'img' will contain the frame
+app = customtkinter.CTk()
+app.geometry("1280x720")
+
+# Add a label to display the image
+label = customtkinter.CTkLabel(app)
+label.pack(side="left",padx=50, pady=20)
+
+text_output = customtkinter.CTkTextbox(app, width=400, height=200)
+text_output.pack(side="right",padx=20, pady=20)
+text_output.configure(state="disabled")
+
+def update_frame():
+    global prev_pos, canvas, image_combined
+
     success, img = cap.read()
     img = cv2.flip(img, 1)
 
@@ -77,16 +95,26 @@ while True:
         canvas = np.zeros_like(img)
 
     info = getHandInfo(img)
-    # Check if any hands are detected
     if info:
         fingers, lmList = info
-        prev_pos, canvas = draw(info, prev_pos, canvas)
+        prev_pos, canvas = draw(info, prev_pos, canvas, img)
         sendToAI(model, canvas, fingers)
 
-    image_combined = cv2. addWeighted(img, 0.7, canvas, 0.3, 0)
-       
-    cv2.imshow("Image_combined", image_combined)
-    #cv2.imshow("Canvas", canvas)
+    image_combined = cv2.addWeighted(img, 0.7, canvas, 0.3, 0)
 
-    # Keep the window open and update it for each frame; wait for 1 millisecond between frames
-    cv2.waitKey(1)
+    # Convert the image_combined to a PIL image, then to a PhotoImage
+    img_pil = Image.fromarray(cv2.cvtColor(image_combined, cv2.COLOR_BGR2RGB))
+    img_tk = ImageTk.PhotoImage(img_pil)
+
+    # Update the label with the new image
+    label.img_tk = img_tk  # Keep a reference to the image to avoid garbage collection
+    label.configure(image=img_tk, text = "")
+
+    # Repeat the function after 10 ms to create a video loop
+    label.after(10, update_frame)
+
+# Start the video loop
+update_frame()
+
+# Start the main loop of the app
+app.mainloop()
