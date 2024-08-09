@@ -77,6 +77,13 @@ image_combined = None
 app = customtkinter.CTk()
 app.geometry("1280x720")
 
+app.title("My AI Math Assistant")
+
+title_label = customtkinter.CTkLabel(app, text="My AI Math Assistant", 
+                                     font=("Arial", 48, "bold"),  # Font and size for the title
+                                     text_color="lightblue")  # Set text color
+title_label.pack(pady=20)
+
 # Add a label to display the image
 label = customtkinter.CTkLabel(app)
 label.pack(side="left",padx=50, pady=20)
