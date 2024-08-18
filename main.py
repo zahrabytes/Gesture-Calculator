@@ -69,6 +69,14 @@ def sendToAI(model, canvas, fingers):
         text_output.insert("1.0", response.text)  # Insert new text
         text_output.configure(state="disabled") 
 
+    elif fingers == [1,0,0,0,1]:
+        pil_image = Image.fromarray(canvas)
+        response = model.generate_content(["Guess what I drew", pil_image])
+        text_output.configure(state="normal")  # Enable text widget
+        text_output.delete("1.0", "end")  # Clear previous content
+        text_output.insert("1.0", response.text)  # Insert new text
+        text_output.configure(state="disabled") 
+
 
 prev_pos = None
 canvas = None
